@@ -1,29 +1,32 @@
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from loguru import logger
+from langchain_text_splitters import (
+    RecursiveCharacterTextSplitter
+)
 
 
-class TextChunker:
+def chunk_documents(
+    documents,
+    chunk_size=500,
+    chunk_overlap=100
+):
 
-    def __init__(
-        self,
-        chunk_size: int = 500,
-        chunk_overlap: int = 100
-    ):
+    splitter = RecursiveCharacterTextSplitter(
+        chunk_size=chunk_size,
+        chunk_overlap=chunk_overlap
+    )
 
-        self.splitter = RecursiveCharacterTextSplitter(
-            chunk_size=chunk_size,
-            chunk_overlap=chunk_overlap
+    chunks = []
+
+    for doc in documents:
+
+        text_chunks = splitter.split_text(
+            doc["content"]
         )
 
-    def chunk_text(self, text: str):
+        for chunk in text_chunks:
 
-        try:
-            chunks = self.splitter.split_text(text)
+            chunks.append({
+                "source": doc["source"],
+                "content": chunk
+            })
 
-            logger.info(f"Generated {len(chunks)} chunks")
-
-            return chunks
-
-        except Exception as e:
-            logger.error(f"Chunking Error: {e}")
-            return []
+    return chunks

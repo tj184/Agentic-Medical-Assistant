@@ -1,65 +1,90 @@
-from loguru import logger
+from app.agents.symptom_agent import (
+    SymptomAgent
+)
 
-from app.agents.symptom_agent import SymptomAgent
-from app.agents.retrieval_agent import RetrievalAgent
-from app.agents.drug_agent import DrugAgent
-from app.agents.report_agent import ReportAgent
-from app.agents.emergency_agent import EmergencyAgent
+from app.agents.drug_agent import (
+    DrugAgent
+)
+
+from app.agents.report_agent import (
+    ReportAgent
+)
+
+from app.agents.emergency_agent import (
+    EmergencyAgent
+)
 
 
 class SupervisorAgent:
 
     def __init__(self):
 
-        self.symptom_agent = SymptomAgent()
-        self.retrieval_agent = RetrievalAgent()
-        self.drug_agent = DrugAgent()
-        self.report_agent = ReportAgent()
-        self.emergency_agent = EmergencyAgent()
+        self.symptom_agent = (
+            SymptomAgent()
+        )
 
-    def process_case(self, symptoms: list, medicines: list = None):
+        self.drug_agent = (
+            DrugAgent()
+        )
 
-        try:
-            logger.info("Starting multi-agent workflow")
+        self.report_agent = (
+            ReportAgent()
+        )
 
-            # Step 1: Symptom Analysis
-            symptom_result = self.symptom_agent.analyze_symptoms(symptoms)
+        self.emergency_agent = (
+            EmergencyAgent()
+        )
 
-            # Step 2: Emergency Detection
-            emergency_result = self.emergency_agent.detect_emergency(symptoms)
+    def process_case(
+        self,
+        symptoms,
+        medicines
+    ):
 
-            # Step 3: Medical Retrieval
-            retrieval_result = self.retrieval_agent.retrieve_medical_context(
-                ", ".join(symptoms)
+        symptom_analysis = (
+            self.symptom_agent
+            .analyze_symptoms(symptoms)
+        )
+
+        drug_analysis = (
+            self.drug_agent
+            .analyze_drugs(medicines)
+        )
+
+        emergency_analysis = (
+            self.emergency_agent
+            .detect_emergency(symptoms)
+        )
+
+        report = (
+            self.report_agent
+            .generate_report(
+                f"""
+                Symptoms:
+                {symptoms}
+
+                Symptom Analysis:
+                {symptom_analysis}
+
+                Drug Analysis:
+                {drug_analysis}
+
+                Emergency Analysis:
+                {emergency_analysis}
+                """
             )
+        )
 
-            # Step 4: Drug Analysis
-            drug_result = None
+        return {
+            "symptom_analysis":
+            symptom_analysis,
 
-            if medicines:
-                drug_result = self.drug_agent.analyze_drugs(medicines)
+            "drug_analysis":
+            drug_analysis,
 
-            # Step 5: Report Generation
-            final_report = self.report_agent.generate_report({
-                "symptoms": symptom_result,
-                "retrieval": retrieval_result,
-                "drug_analysis": drug_result,
-                "emergency": emergency_result
-            })
+            "emergency_analysis":
+            emergency_analysis,
 
-            logger.info("Workflow completed successfully")
-
-            return {
-                "symptom_analysis": symptom_result,
-                "retrieval": retrieval_result,
-                "drug_analysis": drug_result,
-                "emergency": emergency_result,
-                "final_report": final_report
-            }
-
-        except Exception as e:
-            logger.error(f"SupervisorAgent Error: {e}")
-
-            return {
-                "error": str(e)
-            }
+            "report":
+            report
+        }

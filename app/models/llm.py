@@ -1,4 +1,4 @@
-from langchain_community.chat_models import ChatOllama
+import ollama
 
 from loguru import logger
 
@@ -22,32 +22,57 @@ class LLMModel:
     def initialize_model(self):
 
         try:
+
             logger.info(
-                f"Loading Ollama model: "
+                f"Using Ollama model: "
                 f"{settings.OLLAMA_MODEL}"
             )
 
-            self.llm = ChatOllama(
-                model=settings.OLLAMA_MODEL,
-                temperature=0.2,
-                base_url=settings.OLLAMA_BASE_URL
+            self.model_name = (
+                settings.OLLAMA_MODEL
             )
 
-            logger.info("LLM initialized successfully")
+            logger.info(
+                "LLM initialized successfully"
+            )
 
         except Exception as e:
 
-            logger.error(f"LLM Initialization Error: {e}")
+            logger.error(
+                f"LLM Initialization Error: {e}"
+            )
 
-    def generate_response(self, prompt: str):
+    def generate_response(
+        self,
+        prompt: str
+    ):
 
         try:
-            response = self.llm.invoke(prompt)
 
-            return response.content
+            response = ollama.chat(
+
+                model=self.model_name,
+
+                messages=[
+                    {
+                        "role": "user",
+                        "content": prompt
+                    }
+                ]
+            )
+
+            return response[
+                "message"
+            ][
+                "content"
+            ]
 
         except Exception as e:
 
-            logger.error(f"LLM Response Error: {e}")
+            logger.error(
+                f"LLM Response Error: {e}"
+            )
 
-            return "LLM response generation failed."
+            return (
+                "LLM response generation failed."
+            )

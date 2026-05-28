@@ -27,9 +27,7 @@ class Settings(BaseSettings):
     # DATABASE
     # -------------------------
 
-    DATABASE_URL: str = (
-        "postgresql://postgres:password@localhost:5432/medical_ai"
-    )
+    DATABASE_URL: str = "sqlite:///medical_ai.db"
 
     # -------------------------
     # REDIS
@@ -55,7 +53,7 @@ class Settings(BaseSettings):
     # OLLAMA
     # -------------------------
 
-    OLLAMA_MODEL: str = "llama3"
+    OLLAMA_MODEL: str = "gemma4:e2b"
 
     OLLAMA_BASE_URL: str = (
         "http://localhost:11434"

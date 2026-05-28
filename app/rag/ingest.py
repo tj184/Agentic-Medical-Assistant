@@ -1,74 +1,186 @@
-import os
+from pathlib import Path
+
 from pypdf import PdfReader
-from loguru import logger
 
-from app.rag.chunking import TextChunker
-from app.rag.vector_store import VectorStore
+from app.rag.chunking import (
+    chunk_documents
+)
+
+from app.rag.embeddings import (
+    EmbeddingModel
+)
+
+from app.rag.vector_store import (
+    VectorStore
+)
 
 
-class MedicalDataIngestion:
+DATA_PATH = "data/raw"
 
-    def __init__(self):
+SUPPORTED_EXTENSIONS = [
+    ".pdf",
+    ".txt"
+]
 
-        self.chunker = TextChunker()
-        self.vector_store = VectorStore()
 
-    def read_pdf(self, file_path: str):
+def load_documents():
 
-        try:
-            reader = PdfReader(file_path)
+    documents = []
 
-            text = ""
+    data_dir = Path(DATA_PATH)
 
-            for page in reader.pages:
-                text += page.extract_text() + "\n"
+    for file_path in data_dir.rglob("*"):
 
-            logger.info(f"PDF Loaded: {file_path}")
-
-            return text
-
-        except Exception as e:
-            logger.error(f"PDF Read Error: {e}")
-            return ""
-
-    def ingest_pdf(self, file_path: str):
-
-        try:
-            raw_text = self.read_pdf(file_path)
-
-            chunks = self.chunker.chunk_text(raw_text)
-
-            documents = []
-
-            for index, chunk in enumerate(chunks):
-
-                documents.append({
-                    "text": chunk,
-                    "metadata": {
-                        "source": file_path,
-                        "chunk_id": index
-                    }
-                })
-
-            self.vector_store.add_documents(documents)
-
-            logger.info(f"Ingestion completed for: {file_path}")
-
-        except Exception as e:
-            logger.error(f"Ingestion Error: {e}")
-
-    def ingest_directory(self, directory_path: str):
+        if (
+            file_path.suffix.lower()
+            not in SUPPORTED_EXTENSIONS
+        ):
+            continue
 
         try:
-            for filename in os.listdir(directory_path):
 
-                if filename.endswith(".pdf"):
+            # -------------------------
+            # PDF FILES
+            # -------------------------
 
-                    file_path = os.path.join(directory_path, filename)
+            if (
+                file_path.suffix.lower()
+                == ".pdf"
+            ):
 
-                    self.ingest_pdf(file_path)
+                reader = PdfReader(
+                    str(file_path)
+                )
 
-            logger.info("Directory ingestion completed")
+                text = ""
+
+                for page in reader.pages:
+
+                    extracted = (
+                        page.extract_text()
+                    )
+
+                    if extracted:
+
+                        text += (
+                            extracted + "\n"
+                        )
+
+            # -------------------------
+            # TXT FILES
+            # -------------------------
+
+            else:
+
+                with open(
+                    file_path,
+                    "r",
+                    encoding="utf-8"
+                ) as f:
+
+                    text = f.read()
+
+            documents.append({
+                "source": str(file_path),
+                "content": text
+            })
+
+            print(
+                f"Loaded: {file_path}"
+            )
 
         except Exception as e:
-            logger.error(f"Directory Ingestion Error: {e}")
+
+            print(
+                f"Failed loading "
+                f"{file_path}: {e}"
+            )
+
+    return documents
+
+
+def run_ingestion():
+
+    print(
+        "\nLoading documents...\n"
+    )
+
+    documents = load_documents()
+
+    if not documents:
+
+        print("No documents found!")
+
+        return
+
+    print(
+        f"\nLoaded "
+        f"{len(documents)} documents"
+    )
+
+    # -------------------------
+    # CHUNKING
+    # -------------------------
+
+    print(
+        "\nChunking documents...\n"
+    )
+
+    chunks = chunk_documents(
+        documents
+    )
+
+    print(
+        f"Generated "
+        f"{len(chunks)} chunks"
+    )
+
+    # -------------------------
+    # EMBEDDINGS
+    # -------------------------
+
+    print(
+        "\nLoading embedding model...\n"
+    )
+
+    embedding_model = EmbeddingModel()
+
+    print(
+        "\nGenerating embeddings...\n"
+    )
+
+    texts = [
+        chunk["content"]
+        for chunk in chunks
+    ]
+
+    embeddings = (
+        embedding_model.embed_documents(
+            texts
+        )
+    )
+
+    # -------------------------
+    # VECTOR STORE
+    # -------------------------
+
+    print(
+        "\nStoring vectors...\n"
+    )
+
+    vector_store = VectorStore()
+
+    vector_store.add_documents(
+        chunks,
+        embeddings
+    )
+
+    print(
+        "\nIngestion completed "
+        "successfully!"
+    )
+
+
+if __name__ == "__main__":
+
+    run_ingestion()
